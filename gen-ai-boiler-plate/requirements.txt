@@ -1,0 +1,9 @@
+Flask==2.3.3
+requests==2.31.0
+streamlit
+numpy
+google-auth 
+google-api-python-client
+debugpy # Required for debugging.
+google-cloud-storage
+google-cloud-aiplatform
