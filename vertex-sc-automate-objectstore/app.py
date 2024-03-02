@@ -1,30 +1,68 @@
-"""
-A sample Hello World server.
-"""
-import os
+from typing import Optional
+from typing import List
 
-from flask import Flask, render_template
+from google.api_core.client_options import ClientOptions
+from google.cloud import discoveryengine
+from google.cloud import storage
+import requests
 
-# pylint: disable=C0103
-app = Flask(__name__)
+def get_project_id():
+    metadata_server_url = "http://metadata.google.internal/computeMetadata/v1/project/project-id"
+    headers = {"Metadata-Flavor": "Google"}
+    response = requests.get(metadata_server_url, headers=headers)
+    project_id = response.text
+    return project_id
+
+print(get_project_id())
+
+def get_api_endpoint(location):
+    if location != "global":
+        return f'{location}-discoveryengine.googleapis.com'
+    else:
+        return None # Or a default global endpoint if you have one 
+    
+def refresh_document_store(
+    project_id: str,
+    location: str,
+    data_store_id: str,
+    gcs_bkt: str,
+
+) -> str:
+    client_options = ClientOptions(api_endpoint=get_api_endpoint(location))
+    client = discoveryengine.DocumentServiceClient(client_options=client_options)
+    parent = client.branch_path(
+        project=project_id,
+        location=location,
+        data_store=data_store_id,
+        branch="default_branch",
+    )
+    
+    storage_client = storage.Client()
+    bucket = storage_client.bucket(gcs_bkt)
+    
+    gcs_url_lst = []
+    blobs = bucket.list_blobs()
+    for blob in blobs:
+        gcs_uri = "gs://" + gcs_bkt + "/" + blob.name
+        gcs_url_lst.append(gcs_uri)
+
+    
+    request = discoveryengine.ImportDocumentsRequest(
+        parent=parent,
+        gcs_source=discoveryengine.GcsSource(
+                input_uris=gcs_url_lst, data_schema="content"##"custom"
+        ),
+        # Options: `FULL`, `INCREMENTAL`
+        reconciliation_mode=discoveryengine.ImportDocumentsRequest.ReconciliationMode.FULL,
+        )
+    
+    operation = client.import_documents(request=request)
+    response = operation.result()
+    print ("result=", response)
+    # Once the operation is complete,
+    # get information from operation metadata
+    metadata = discoveryengine.ImportDocumentsMetadata(operation.metadata)
+    print (metadata)
 
 
-
-
-@app.route('/')
-def hello():
-    """Return a friendly HTTP greeting."""
-    message = "It's running!"
-
-    """Get Cloud Run environment variables."""
-    service = os.environ.get('K_SERVICE', 'Unknown service')
-    revision = os.environ.get('K_REVISION', 'Unknown revision')
-
-    return render_template('index.html',
-        message=message,
-        Service=service,
-        Revision=revision)
-
-if __name__ == '__main__':
-    server_port = os.environ.get('PORT', '8080')
-    app.run(debug=False, port=server_port, host='0.0.0.0')
+get_project_id()
