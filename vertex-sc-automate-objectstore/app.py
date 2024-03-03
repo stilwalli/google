@@ -1,68 +1,35 @@
-from typing import Optional
-from typing import List
+"""
+Updates Vertex Search & Conversation Datastore
+"""
+import os
+import google.cloud.logging
+from flask import Flask, render_template
+from flask import request
+import appModel
+import logging
 
-from google.api_core.client_options import ClientOptions
-from google.cloud import discoveryengine
-from google.cloud import storage
-import requests
+# pylint: disable=C0103
+app = Flask(__name__)
 
-def get_project_id():
-    metadata_server_url = "http://metadata.google.internal/computeMetadata/v1/project/project-id"
-    headers = {"Metadata-Flavor": "Google"}
-    response = requests.get(metadata_server_url, headers=headers)
-    project_id = response.text
-    return project_id
+# Instantiates a client
+client = google.cloud.logging.Client()
+client.setup_logging()
 
-print(get_project_id())
-
-def get_api_endpoint(location):
-    if location != "global":
-        return f'{location}-discoveryengine.googleapis.com'
+@app.route('/')
+def controller():
+    location = request.args.get('location')
+    bucketName = request.args.get('bucketName')
+    data_store_id = request.args.get('data_store_id')
+    if (location !=None and bucketName !=None and data_store_id !=None):
+        response =  appModel.refresh_document_store(location, data_store_id, bucketName)
+        logging.info("Object Store Update Response: " + str(response))
+        return str(response)
     else:
-        return None # Or a default global endpoint if you have one 
-    
-def refresh_document_store(
-    project_id: str,
-    location: str,
-    data_store_id: str,
-    gcs_bkt: str,
+        return "Missing Parameters"
 
-) -> str:
-    client_options = ClientOptions(api_endpoint=get_api_endpoint(location))
-    client = discoveryengine.DocumentServiceClient(client_options=client_options)
-    parent = client.branch_path(
-        project=project_id,
-        location=location,
-        data_store=data_store_id,
-        branch="default_branch",
-    )
-    
-    storage_client = storage.Client()
-    bucket = storage_client.bucket(gcs_bkt)
-    
-    gcs_url_lst = []
-    blobs = bucket.list_blobs()
-    for blob in blobs:
-        gcs_uri = "gs://" + gcs_bkt + "/" + blob.name
-        gcs_url_lst.append(gcs_uri)
+# If `entrypoint` is not defined in app.yaml, App Engine will look for an app
+# called `app` in `main.py`.
 
-    
-    request = discoveryengine.ImportDocumentsRequest(
-        parent=parent,
-        gcs_source=discoveryengine.GcsSource(
-                input_uris=gcs_url_lst, data_schema="content"##"custom"
-        ),
-        # Options: `FULL`, `INCREMENTAL`
-        reconciliation_mode=discoveryengine.ImportDocumentsRequest.ReconciliationMode.FULL,
-        )
-    
-    operation = client.import_documents(request=request)
-    response = operation.result()
-    print ("result=", response)
-    # Once the operation is complete,
-    # get information from operation metadata
-    metadata = discoveryengine.ImportDocumentsMetadata(operation.metadata)
-    print (metadata)
-
-
-get_project_id()
+if __name__ == '__main__':
+    server_port = os.environ.get('PORT', '8080')
+    app.run(debug=False, port=server_port, host='0.0.0.0')
