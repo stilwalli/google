@@ -15,7 +15,11 @@ app = Flask(__name__)
 client = google.cloud.logging.Client()
 client.setup_logging()
 
-@app.route('/')
+@app.route('/', methods=['GET', 'POST'])
+def index():
+    return render_template('index.html')
+
+@app.route('/controller', methods=['GET'])
 def controller():
     location = request.args.get('location')
     bucketName = request.args.get('bucketName')
