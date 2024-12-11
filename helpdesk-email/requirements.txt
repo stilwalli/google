@@ -1,0 +1,8 @@
+functions-framework==3.5.0
+google-cloud-storage
+google-cloud-aiplatform
+google-cloud-discoveryengine
+sendgrid
+python-dotenv
+
+#sendgrid
