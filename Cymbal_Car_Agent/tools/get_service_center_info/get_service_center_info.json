@@ -1,0 +1,9 @@
+{
+  "name": "d07101f0-8d85-40cb-a69a-813c4fcd0eba",
+  "pythonFunction": {
+    "name": "get_service_center_info",
+    "pythonCode": "tools/get_service_center_info/python_function/python_code.py",
+    "description": "Retrieves information about Cymbal Cars service centers based on location and/or type of service.\n\nArgs:\n    location (str | None): The city, state, or zip code to search for service centers. Optional.\n    service_type (str | None): The type of service offered (e.g., \"Maintenance\", \"Repairs\", \"Tire Rotation\"). Optional.\n\nReturns:\n    Dict[str, Any]: A dictionary containing the status of the request and a list of service centers\n                    with their details (name, address, phone, hours, services), or an error message.\n          Example success: {\"status\": \"success\", \"service_centers\": [{\"name\": \"...\", \"address\": \"...\", ...}]}\n          Example no results: {\"status\": \"no_results\", \"message\": \"No service centers found for the specified criteria.\"}\n          Example error: {\"status\": \"error\", \"message\": \"Invalid input provided.\"}"
+  },
+  "displayName": "get_service_center_info"
+}

@@ -1,0 +1,10 @@
+{
+  "name": "5b509631-4aa9-481e-a169-8bc50f41641f",
+  "pythonFunction": {
+    "name": "get_service_center_by_city",
+    "pythonCode": "tools/get_service_center_by_city/python_function/python_code.py",
+    "description": "This function returns service center addresses for a given city.\nArgs:\n  city (str): name of the city.\nReturns:\n  Service center address in the given city."
+  },
+  "executionType": "SYNCHRONOUS",
+  "displayName": "get_service_center_by_city"
+}

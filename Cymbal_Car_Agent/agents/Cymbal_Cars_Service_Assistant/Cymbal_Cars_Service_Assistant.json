@@ -1,0 +1,7 @@
+{
+  "name": "46a9341d-0357-44af-8201-6fe0cb4a299c",
+  "displayName": "Cymbal Cars Service Assistant",
+  "instruction": "agents/Cymbal_Cars_Service_Assistant/instruction.txt",
+  "tools": ["end_session"],
+  "childAgents": ["service_center_finder_agent", "feedback_agent"]
+}

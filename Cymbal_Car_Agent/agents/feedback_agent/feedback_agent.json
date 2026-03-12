@@ -1,0 +1,7 @@
+{
+  "name": "b8008dbe-643b-4040-97bd-a562401b5e79",
+  "displayName": "feedback_agent",
+  "description": "This sub-agent collects user feedback / complaints on their cars and services, and files a ticket to the company.",
+  "instruction": "agents/feedback_agent/instruction.txt",
+  "tools": ["end_session", "feedback"]
+}

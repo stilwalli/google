@@ -1,0 +1,10 @@
+{
+  "name": "b997366a-d64f-49fd-88be-73daf9817df1",
+  "pythonFunction": {
+    "name": "feedback",
+    "pythonCode": "tools/feedback/python_function/python_code.py",
+    "description": "Allows the user to provide feedback and returns with the ticket number.\nArgs:\n  message (str): user\u0027s feedback\nReturns:\n  Ticket number."
+  },
+  "executionType": "ASYNCHRONOUS",
+  "displayName": "feedback"
+}

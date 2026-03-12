@@ -1,0 +1,7 @@
+{
+  "name": "d425dec7-4ce7-49ae-96d7-66ddeffd14e6",
+  "displayName": "service_center_finder_agent",
+  "description": "This sub-agent finds a Cymbal service center for a given location.",
+  "instruction": "agents/service_center_finder_agent/instruction.txt",
+  "tools": ["end_session", "get_service_center_by_city"]
+}

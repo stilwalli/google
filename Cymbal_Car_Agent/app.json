@@ -1,0 +1,47 @@
+{
+  "name": "9984e18d-9355-4671-b823-4c6e05f4f335",
+  "displayName": "Cymbal Car Agent - 03122026 - 001",
+  "description": "Cymbal Car service agent answers questions about Cymbal Car services",
+  "rootAgent": "Cymbal Cars Service Assistant",
+  "audioProcessingConfig": {
+    "synthesizeSpeechConfigs": {
+      "en-US": {
+      }
+    },
+    "inactivityTimeout": "5s",
+    "ambientSoundConfig": {
+    }
+  },
+  "loggingSettings": {
+    "redactionConfig": {
+      "enableRedaction": true
+    },
+    "audioRecordingConfig": {
+      "gcsBucket": "$env_var"
+    },
+    "bigqueryExportSettings": {
+      "enabled": true,
+      "project": "$env_var",
+      "dataset": "$env_var"
+    },
+    "cloudLoggingSettings": {
+      "enableCloudLogging": true
+    },
+    "conversationLoggingSettings": {
+    },
+    "metricAnalysisSettings": {
+    }
+  },
+  "guardrails": ["Safety Guardrail 1773331804670", "Prompt Guardrail 1773331804670"],
+  "languageSettings": {
+    "defaultLanguageCode": "en-US"
+  },
+  "defaultChannelProfile": {
+  },
+  "timeZoneSettings": {
+    "timeZone": "America/Los_Angeles"
+  },
+  "toolExecutionMode": "PARALLEL",
+  "errorHandlingSettings": {
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "df265b39-97b2-4447-b75e-0254be8e1edd",
+  "displayName": "Prompt Guardrail 1773331804670",
+  "enabled": true,
+  "action": {
+    "generativeAnswer": {
+    }
+  },
+  "llmPromptSecurity": {
+    "defaultSettings": {
+    }
+  }
+}
