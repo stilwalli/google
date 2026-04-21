@@ -7,3 +7,5 @@ python-dotenv
 numpy
 pypdf
 rank-bm25
+fastapi
+uvicorn

@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RAG Pattern Benchmark</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:      #0a0a0a;
+    --surface: #111111;
+    --border:  #222222;
+    --accent:  #00ff88;
+    --accent2: #0088ff;
+    --accent3: #ff6b35;
+    --text:    #e8e8e8;
+    --muted:   #555555;
+    --mono:    'IBM Plex Mono', monospace;
+    --sans:    'IBM Plex Sans', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    padding: 40px 24px;
+  }
+
+  header {
+    max-width: 1200px;
+    margin: 0 auto 48px;
+    border-left: 3px solid var(--accent);
+    padding-left: 20px;
+  }
+
+  header .label {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  header h1 {
+    font-size: 32px;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+    margin-bottom: 6px;
+  }
+
+  header p {
+    color: var(--muted);
+    font-size: 14px;
+    font-family: var(--mono);
+  }
+
+  .controls {
+    max-width: 1200px;
+    margin: 0 auto 40px;
+    display: flex;
+    gap: 16px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+  }
+
+  .control-group {
+    flex: 1;
+    min-width: 280px;
+  }
+
+  .control-group label {
+    display: block;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  select {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 12px 16px;
+    appearance: none;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.2s;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%2300ff88' d='M6 8L0 0h12z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 16px center;
+    padding-right: 40px;
+  }
+
+  select:focus { border-color: var(--accent); }
+
+  button#runBtn {
+    background: var(--accent);
+    color: #000;
+    border: none;
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 12px 32px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  button#runBtn:hover    { background: #00cc6a; }
+  button#runBtn:disabled { background: var(--muted); cursor: not-allowed; color: #333; }
+
+  .status-bar {
+    max-width: 1200px;
+    margin: 0 auto 32px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 20px;
+  }
+
+  .status-bar .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--muted);
+    flex-shrink: 0;
+  }
+
+  .status-bar.running .dot {
+    background: var(--accent);
+    animation: pulse 1s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.3; }
+  }
+
+  .grid {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 2px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.4s, transform 0.4s, border-color 0.2s;
+  }
+
+  .card.visible  { opacity: 1; transform: translateY(0); }
+  .card.loading  { border-color: var(--accent); }
+  .card.done     { border-color: var(--border); }
+  .card.error    { border-color: var(--accent3); }
+
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .card-title {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .card-badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 3px 8px;
+    border: 1px solid;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .badge-loading { color: var(--accent);  border-color: var(--accent); }
+  .badge-done    { color: var(--accent2); border-color: var(--accent2); }
+  .badge-error   { color: var(--accent3); border-color: var(--accent3); }
+
+  .card-desc {
+    font-size: 12px;
+    color: var(--muted);
+    font-family: var(--mono);
+    line-height: 1.5;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .answer-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .answer-text {
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--text);
+    flex: 1;
+    min-height: 80px;
+  }
+
+  .answer-text.placeholder {
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+
+  .skeleton {
+    background: linear-gradient(90deg, var(--border) 25%, #2a2a2a 50%, var(--border) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 2px;
+    height: 14px;
+    margin-bottom: 8px;
+  }
+
+  .skeleton:last-child { width: 70%; }
+
+  @keyframes shimmer {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  .timing {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: auto;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+  }
+
+  .empty {
+    max-width: 1200px;
+    margin: 60px auto;
+    text-align: center;
+    font-family: var(--mono);
+    color: var(--muted);
+  }
+
+  .empty .big { font-size: 48px; margin-bottom: 16px; }
+  .empty p    { font-size: 13px; letter-spacing: 1px; }
+
+  footer {
+    max-width: 1200px;
+    margin: 60px auto 0;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    display: flex;
+    justify-content: space-between;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="label">RAG Benchmark</div>
+  <h1>Pattern Comparison</h1>
+  <p>IRS Policy Q&A · Gemini · FAISS</p>
+</header>
+
+<div class="controls">
+  <div class="control-group">
+    <label>Select Question</label>
+    <select id="questionSelect">
+      <option value="">-- Pick a question --</option>
+      <option>What is the income limit to qualify for Earned Income Credit?</option>
+      <option>Can I claim EIC if I am self employed?</option>
+      <option>What happens if I claim EIC incorrectly?</option>
+      <option>What are the age requirements for a qualifying child for EIC?</option>
+      <option>Can I claim EIC if I have investment income?</option>
+      <option>What is the difference between earned income and investment income for EIC?</option>
+    </select>
+  </div>
+  <button id="runBtn" onclick="runAll()">▶ Run All RAGs</button>
+</div>
+
+<div class="status-bar" id="statusBar">
+  <div class="dot"></div>
+  <span id="statusText">Select a question and click Run</span>
+</div>
+
+<div id="emptyState" class="empty">
+  <div class="big">⚡</div>
+  <p>Select a question above to compare RAG patterns</p>
+</div>
+
+<div class="grid" id="grid"></div>
+
+<footer>
+  <span>rag-benchmark · IRS pub596</span>
+  <span id="footerTime"></span>
+</footer>
+
+<script>
+const API = "http://localhost:8000";
+
+const RAGS = [
+  {
+    id:       "naive",
+    title:    "Naive RAG",
+    desc:     "Embed → FAISS top-5 → Generate",
+    color:    "#00ff88",
+    endpoint: "naive"
+  },
+  {
+    id:       "advanced",
+    title:    "Advanced RAG",
+    desc:     "Rewrite → FAISS top-10 → Rerank → Generate",
+    color:    "#0088ff",
+    endpoint: "advanced"
+  },
+  {
+    id:       "hybrid",
+    title:    "Hybrid RAG",
+    desc:     "FAISS + BM25 → RRF Fusion → Generate",
+    color:    "#ff6b35",
+    endpoint: "hybrid"
+  },
+  {
+    id:       "compression",
+    title:    "Contextual Compression",
+    desc:     "Retrieve → Compress chunks → Generate",
+    color:    "#cc44ff",
+    endpoint: "compression"
+  }
+];
+
+async function callRag(endpoint, question) {
+  const res = await fetch(`${API}/run/${endpoint}`, {
+    method:  "POST",
+    headers: { "Content-Type": "application/json" },
+    body:    JSON.stringify({ question })
+  });
+  if (!res.ok) throw new Error(`Server error: ${res.status}`);
+  const data = await res.json();
+  return { answer: data.answer, ms: data.ms };
+}
+
+function setStatus(text, running = false) {
+  const bar = document.getElementById("statusBar");
+  bar.className = "status-bar" + (running ? " running" : "");
+  document.getElementById("statusText").textContent = text;
+}
+
+function renderCards() {
+  const grid = document.getElementById("grid");
+  grid.innerHTML = "";
+
+  RAGS.forEach((rag, i) => {
+    const card = document.createElement("div");
+    card.className = "card";
+    card.id = `card-${rag.id}`;
+    card.innerHTML = `
+      <div class="card-header">
+        <div class="card-title" style="color:${rag.color}">${rag.title}</div>
+        <div class="card-badge badge-loading" id="badge-${rag.id}">QUEUED</div>
+      </div>
+      <div class="card-desc">${rag.desc}</div>
+      <div class="answer-label">Answer</div>
+      <div class="answer-text placeholder" id="answer-${rag.id}">
+        <div class="skeleton"></div>
+        <div class="skeleton"></div>
+        <div class="skeleton"></div>
+      </div>
+      <div class="timing" id="timing-${rag.id}">—</div>
+    `;
+    grid.appendChild(card);
+    setTimeout(() => card.classList.add("visible"), i * 80);
+  });
+}
+
+function setCardLoading(ragId) {
+  document.getElementById(`badge-${ragId}`).className  = "card-badge badge-loading";
+  document.getElementById(`badge-${ragId}`).textContent = "RUNNING";
+  document.getElementById(`card-${ragId}`).className   = "card visible loading";
+}
+
+function setCardDone(ragId, answer, ms) {
+  document.getElementById(`badge-${ragId}`).className   = "card-badge badge-done";
+  document.getElementById(`badge-${ragId}`).textContent  = "DONE";
+  document.getElementById(`card-${ragId}`).className    = "card visible done";
+  const ansDiv = document.getElementById(`answer-${ragId}`);
+  ansDiv.className  = "answer-text";
+  ansDiv.textContent = answer;
+  document.getElementById(`timing-${ragId}`).textContent = `⏱ ${(ms/1000).toFixed(2)}s`;
+}
+
+function setCardError(ragId, err) {
+  document.getElementById(`badge-${ragId}`).className   = "card-badge badge-error";
+  document.getElementById(`badge-${ragId}`).textContent  = "ERROR";
+  document.getElementById(`card-${ragId}`).className    = "card visible error";
+  const ansDiv = document.getElementById(`answer-${ragId}`);
+  ansDiv.className   = "answer-text";
+  ansDiv.style.color = "var(--accent3)";
+  ansDiv.textContent = `Error: ${err}`;
+}
+
+async function runAll() {
+  const question = document.getElementById("questionSelect").value;
+  if (!question) { alert("Please select a question first."); return; }
+
+  document.getElementById("emptyState").style.display = "none";
+  document.getElementById("runBtn").disabled = true;
+  document.getElementById("footerTime").textContent = "";
+
+  renderCards();
+  setStatus("Running all 4 RAG pipelines...", true);
+
+  const startAll = Date.now();
+  let completed  = 0;
+
+  const promises = RAGS.map(async (rag) => {
+    setCardLoading(rag.id);
+    try {
+      const { answer, ms } = await callRag(rag.endpoint, question);
+      setCardDone(rag.id, answer, ms);
+    } catch (e) {
+      setCardError(rag.id, e.message);
+    }
+    completed++;
+    setStatus(
+      `Completed ${completed}/${RAGS.length} pipelines...`,
+      completed < RAGS.length
+    );
+  });
+
+  await Promise.all(promises);
+
+  const totalMs = Date.now() - startAll;
+  setStatus(`All ${RAGS.length} pipelines completed in ${(totalMs/1000).toFixed(2)}s`);
+  document.getElementById("runBtn").disabled = false;
+  document.getElementById("footerTime").textContent =
+    `Last run: ${new Date().toLocaleTimeString()}`;
+}
+</script>
+</body>
+</html>
