@@ -102,7 +102,10 @@
 
   select:focus { border-color: var(--accent); }
 
-  button#runBtn {
+  optgroup { color: var(--muted); background: var(--surface); }
+  option   { color: var(--text);  background: var(--surface); }
+
+  #runBtn {
     background: var(--accent);
     color: #000;
     border: none;
@@ -117,8 +120,8 @@
     white-space: nowrap;
   }
 
-  button#runBtn:hover    { background: #00cc6a; }
-  button#runBtn:disabled { background: var(--muted); cursor: not-allowed; color: #333; }
+  #runBtn:hover    { background: #00cc6a; }
+  #runBtn:disabled { background: var(--muted); cursor: not-allowed; color: #333; }
 
   .status-bar {
     max-width: 1200px;
@@ -132,14 +135,15 @@
     min-height: 20px;
   }
 
-  .status-bar .dot {
-    width: 8px; height: 8px;
+  .dot {
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
     background: var(--muted);
     flex-shrink: 0;
   }
 
-  .status-bar.running .dot {
+  .running .dot {
     background: var(--accent);
     animation: pulse 1s infinite;
   }
@@ -200,6 +204,7 @@
     flex-shrink: 0;
   }
 
+  .badge-queued  { color: var(--muted);   border-color: var(--muted); }
   .badge-loading { color: var(--accent);  border-color: var(--accent); }
   .badge-done    { color: var(--accent2); border-color: var(--accent2); }
   .badge-error   { color: var(--accent3); border-color: var(--accent3); }
@@ -229,11 +234,13 @@
     min-height: 80px;
   }
 
-  .answer-text.placeholder {
+  .answer-text.muted {
     color: var(--muted);
     font-family: var(--mono);
     font-size: 12px;
   }
+
+  .answer-text.err { color: var(--accent3); }
 
   .skeleton {
     background: linear-gradient(90deg, var(--border) 25%, #2a2a2a 50%, var(--border) 75%);
@@ -244,7 +251,7 @@
     margin-bottom: 8px;
   }
 
-  .skeleton:last-child { width: 70%; }
+  .skeleton.short { width: 60%; }
 
   @keyframes shimmer {
     0%   { background-position: 200% 0; }
@@ -289,7 +296,7 @@
 <header>
   <div class="label">RAG Benchmark</div>
   <h1>Pattern Comparison</h1>
-  <p>IRS Policy Q&A · Gemini · FAISS</p>
+  <p>IRS Policy Q&amp;A · Gemini · FAISS</p>
 </header>
 
 <div class="controls">
@@ -297,15 +304,35 @@
     <label>Select Question</label>
     <select id="questionSelect">
       <option value="">-- Pick a question --</option>
-      <option>What is the income limit to qualify for Earned Income Credit?</option>
-      <option>Can I claim EIC if I am self employed?</option>
-      <option>What happens if I claim EIC incorrectly?</option>
-      <option>What are the age requirements for a qualifying child for EIC?</option>
-      <option>Can I claim EIC if I have investment income?</option>
-      <option>What is the difference between earned income and investment income for EIC?</option>
+      <optgroup label="── Simple / Factual ──">
+        <option>What is the maximum Earned Income Credit amount for 2023?</option>
+        <option>What is the investment income limit to qualify for EIC?</option>
+        <option>What filing statuses are NOT eligible for EIC?</option>
+        <option>What is the minimum age to claim EIC with no qualifying child?</option>
+        <option>What is the maximum age limit for claiming EIC?</option>
+      </optgroup>
+      <optgroup label="── Eligibility / Nuanced ──">
+        <option>Can I claim EIC if my spouse is a nonresident alien?</option>
+        <option>Can I claim EIC if I am self employed?</option>
+        <option>Can I claim EIC if I did not live with my child all year?</option>
+        <option>Can a qualifying child be claimed by two people at the same time?</option>
+        <option>Can I claim EIC if I have no children but lived in the US all year?</option>
+        <option>What happens if both parents claim the same child for EIC?</option>
+        <option>Can a grandparent claim a grandchild as a qualifying child for EIC?</option>
+      </optgroup>
+      <optgroup label="── Edge Cases / Complex ──">
+        <option>What happens if I claim EIC incorrectly due to fraud?</option>
+        <option>How does EIC change if I get married mid-year?</option>
+        <option>Does disability income count as earned income for EIC?</option>
+        <option>How does the EIC phase out as income increases?</option>
+        <option>What is the difference between earned income and AGI for EIC purposes?</option>
+        <option>Can a full time student claim EIC with no qualifying child?</option>
+        <option>What form do I file to claim EIC after being banned previously?</option>
+        <option>How does EIC work if I have both wages and self employment income?</option>
+      </optgroup>
     </select>
   </div>
-  <button id="runBtn" onclick="runAll()">▶ Run All RAGs</button>
+  <button id="runBtn">&#9654; Run All RAGs</button>
 </div>
 
 <div class="status-bar" id="statusBar">
@@ -314,7 +341,7 @@
 </div>
 
 <div id="emptyState" class="empty">
-  <div class="big">⚡</div>
+  <div class="big">&#9889;</div>
   <p>Select a question above to compare RAG patterns</p>
 </div>
 
@@ -326,111 +353,86 @@
 </footer>
 
 <script>
-const API = "http://localhost:8000";
+var API = "http://localhost:8000";
 
-const RAGS = [
-  {
-    id:       "naive",
-    title:    "Naive RAG",
-    desc:     "Embed → FAISS top-5 → Generate",
-    color:    "#00ff88",
-    endpoint: "naive"
-  },
-  {
-    id:       "advanced",
-    title:    "Advanced RAG",
-    desc:     "Rewrite → FAISS top-10 → Rerank → Generate",
-    color:    "#0088ff",
-    endpoint: "advanced"
-  },
-  {
-    id:       "hybrid",
-    title:    "Hybrid RAG",
-    desc:     "FAISS + BM25 → RRF Fusion → Generate",
-    color:    "#ff6b35",
-    endpoint: "hybrid"
-  },
-  {
-    id:       "compression",
-    title:    "Contextual Compression",
-    desc:     "Retrieve → Compress chunks → Generate",
-    color:    "#cc44ff",
-    endpoint: "compression"
-  }
+var RAGS = [
+  { id: "naive",       title: "Naive RAG",             desc: "Embed → FAISS top-5 → Generate",             color: "#00ff88", endpoint: "naive"       },
+  { id: "advanced",    title: "Advanced RAG",           desc: "Rewrite → FAISS top-10 → Rerank → Generate", color: "#0088ff", endpoint: "advanced"    },
+  { id: "hybrid",      title: "Hybrid RAG",             desc: "FAISS + BM25 → RRF Fusion → Generate",       color: "#ff6b35", endpoint: "hybrid"      },
+  { id: "compression", title: "Contextual Compression", desc: "Retrieve → Compress chunks → Generate",      color: "#cc44ff", endpoint: "compression" }
 ];
 
-async function callRag(endpoint, question) {
-  const res = await fetch(`${API}/run/${endpoint}`, {
+function callRag(endpoint, question) {
+  return fetch(API + "/run/" + endpoint, {
     method:  "POST",
     headers: { "Content-Type": "application/json" },
-    body:    JSON.stringify({ question })
+    body:    JSON.stringify({ question: question })
+  }).then(function(res) {
+    if (!res.ok) throw new Error("Server error: " + res.status);
+    return res.json();
+  }).then(function(data) {
+    return { answer: data.answer, ms: data.ms };
   });
-  if (!res.ok) throw new Error(`Server error: ${res.status}`);
-  const data = await res.json();
-  return { answer: data.answer, ms: data.ms };
 }
 
-function setStatus(text, running = false) {
-  const bar = document.getElementById("statusBar");
+function setStatus(text, running) {
+  var bar = document.getElementById("statusBar");
   bar.className = "status-bar" + (running ? " running" : "");
   document.getElementById("statusText").textContent = text;
 }
 
 function renderCards() {
-  const grid = document.getElementById("grid");
+  var grid = document.getElementById("grid");
   grid.innerHTML = "";
-
-  RAGS.forEach((rag, i) => {
-    const card = document.createElement("div");
+  RAGS.forEach(function(rag, i) {
+    var card = document.createElement("div");
     card.className = "card";
-    card.id = `card-${rag.id}`;
-    card.innerHTML = `
-      <div class="card-header">
-        <div class="card-title" style="color:${rag.color}">${rag.title}</div>
-        <div class="card-badge badge-loading" id="badge-${rag.id}">QUEUED</div>
-      </div>
-      <div class="card-desc">${rag.desc}</div>
-      <div class="answer-label">Answer</div>
-      <div class="answer-text placeholder" id="answer-${rag.id}">
-        <div class="skeleton"></div>
-        <div class="skeleton"></div>
-        <div class="skeleton"></div>
-      </div>
-      <div class="timing" id="timing-${rag.id}">—</div>
-    `;
+    card.id = "card-" + rag.id;
+    card.innerHTML =
+      '<div class="card-header">' +
+        '<div class="card-title" style="color:' + rag.color + '">' + rag.title + '</div>' +
+        '<div class="card-badge badge-queued" id="badge-' + rag.id + '">QUEUED</div>' +
+      '</div>' +
+      '<div class="card-desc">' + rag.desc + '</div>' +
+      '<div class="answer-label">Answer</div>' +
+      '<div class="answer-text muted" id="answer-' + rag.id + '">' +
+        '<div class="skeleton"></div>' +
+        '<div class="skeleton"></div>' +
+        '<div class="skeleton short"></div>' +
+      '</div>' +
+      '<div class="timing" id="timing-' + rag.id + '">—</div>';
     grid.appendChild(card);
-    setTimeout(() => card.classList.add("visible"), i * 80);
+    setTimeout(function() { card.classList.add("visible"); }, i * 80);
   });
 }
 
-function setCardLoading(ragId) {
-  document.getElementById(`badge-${ragId}`).className  = "card-badge badge-loading";
-  document.getElementById(`badge-${ragId}`).textContent = "RUNNING";
-  document.getElementById(`card-${ragId}`).className   = "card visible loading";
+function setCardLoading(id) {
+  document.getElementById("badge-" + id).className   = "card-badge badge-loading";
+  document.getElementById("badge-" + id).textContent = "RUNNING";
+  document.getElementById("card-"  + id).className   = "card visible loading";
 }
 
-function setCardDone(ragId, answer, ms) {
-  document.getElementById(`badge-${ragId}`).className   = "card-badge badge-done";
-  document.getElementById(`badge-${ragId}`).textContent  = "DONE";
-  document.getElementById(`card-${ragId}`).className    = "card visible done";
-  const ansDiv = document.getElementById(`answer-${ragId}`);
-  ansDiv.className  = "answer-text";
-  ansDiv.textContent = answer;
-  document.getElementById(`timing-${ragId}`).textContent = `⏱ ${(ms/1000).toFixed(2)}s`;
+function setCardDone(id, answer, ms) {
+  document.getElementById("badge-"  + id).className   = "card-badge badge-done";
+  document.getElementById("badge-"  + id).textContent = "DONE";
+  document.getElementById("card-"   + id).className   = "card visible done";
+  var a = document.getElementById("answer-" + id);
+  a.className   = "answer-text";
+  a.textContent = answer;
+  document.getElementById("timing-" + id).textContent = "⏱ " + (ms / 1000).toFixed(2) + "s";
 }
 
-function setCardError(ragId, err) {
-  document.getElementById(`badge-${ragId}`).className   = "card-badge badge-error";
-  document.getElementById(`badge-${ragId}`).textContent  = "ERROR";
-  document.getElementById(`card-${ragId}`).className    = "card visible error";
-  const ansDiv = document.getElementById(`answer-${ragId}`);
-  ansDiv.className   = "answer-text";
-  ansDiv.style.color = "var(--accent3)";
-  ansDiv.textContent = `Error: ${err}`;
+function setCardError(id, msg) {
+  document.getElementById("badge-"  + id).className   = "card-badge badge-error";
+  document.getElementById("badge-"  + id).textContent = "ERROR";
+  document.getElementById("card-"   + id).className   = "card visible error";
+  var a = document.getElementById("answer-" + id);
+  a.className   = "answer-text err";
+  a.textContent = "Error: " + msg;
 }
 
-async function runAll() {
-  const question = document.getElementById("questionSelect").value;
+function runAll() {
+  var question = document.getElementById("questionSelect").value;
   if (!question) { alert("Please select a question first."); return; }
 
   document.getElementById("emptyState").style.display = "none";
@@ -440,32 +442,32 @@ async function runAll() {
   renderCards();
   setStatus("Running all 4 RAG pipelines...", true);
 
-  const startAll = Date.now();
-  let completed  = 0;
+  var startAll  = Date.now();
+  var completed = 0;
+  var total     = RAGS.length;
 
-  const promises = RAGS.map(async (rag) => {
+  RAGS.forEach(function(rag) {
     setCardLoading(rag.id);
-    try {
-      const { answer, ms } = await callRag(rag.endpoint, question);
-      setCardDone(rag.id, answer, ms);
-    } catch (e) {
+    callRag(rag.endpoint, question).then(function(result) {
+      setCardDone(rag.id, result.answer, result.ms);
+    }).catch(function(e) {
       setCardError(rag.id, e.message);
-    }
-    completed++;
-    setStatus(
-      `Completed ${completed}/${RAGS.length} pipelines...`,
-      completed < RAGS.length
-    );
+    }).finally(function() {
+      completed++;
+      if (completed < total) {
+        setStatus("Completed " + completed + "/" + total + " pipelines...", true);
+      } else {
+        var totalMs = Date.now() - startAll;
+        setStatus("All " + total + " pipelines completed in " + (totalMs / 1000).toFixed(2) + "s");
+        document.getElementById("runBtn").disabled = false;
+        document.getElementById("footerTime").textContent =
+          "Last run: " + new Date().toLocaleTimeString();
+      }
+    });
   });
-
-  await Promise.all(promises);
-
-  const totalMs = Date.now() - startAll;
-  setStatus(`All ${RAGS.length} pipelines completed in ${(totalMs/1000).toFixed(2)}s`);
-  document.getElementById("runBtn").disabled = false;
-  document.getElementById("footerTime").textContent =
-    `Last run: ${new Date().toLocaleTimeString()}`;
 }
+
+document.getElementById("runBtn").addEventListener("click", runAll);
 </script>
 </body>
 </html>
