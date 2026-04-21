@@ -6,3 +6,4 @@ streamlit
 python-dotenv
 numpy
 pypdf
+rank-bm25
