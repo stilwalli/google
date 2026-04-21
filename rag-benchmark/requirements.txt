@@ -1,0 +1,8 @@
+google-adk
+google-genai
+faiss-cpu
+pypdf
+streamlit
+python-dotenv
+numpy
+pypdf
